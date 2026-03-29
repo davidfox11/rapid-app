@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -27,18 +28,24 @@ void main() {
     testWidgets('authenticated user redirects from / to /home',
         (tester) async {
       isAuthenticated = true;
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
       await tester.pumpAndSettle();
-      // Should show Hub placeholder
-      expect(find.text('Hub'), findsOneWidget);
+      expect(find.text('The Hub'), findsOneWidget);
     });
 
     testWidgets('unauthenticated user stays on /', (tester) async {
       isAuthenticated = false;
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Rapid.'), findsOneWidget);
-      // Reset for other tests
       isAuthenticated = true;
     });
   });

@@ -13,6 +13,6 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Hub'), findsOneWidget);
+    expect(find.text('The Hub'), findsOneWidget);
   });
 }
