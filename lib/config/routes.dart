@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../screens/onboarding/profile_setup_screen.dart';
+import '../screens/onboarding/welcome_screen.dart';
 import '../theme/app_typography.dart';
 import '../widgets/screen_background.dart';
 
@@ -21,11 +23,11 @@ final router = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => const _Placeholder('Welcome'),
+      builder: (context, state) => const WelcomeScreen(),
     ),
     GoRoute(
       path: '/profile-setup',
-      builder: (context, state) => const _Placeholder('Profile Setup'),
+      builder: (context, state) => const ProfileSetupScreen(),
     ),
     GoRoute(
       path: '/home',

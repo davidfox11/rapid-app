@@ -37,7 +37,7 @@ void main() {
       isAuthenticated = false;
       await tester.pumpWidget(MaterialApp.router(routerConfig: router));
       await tester.pumpAndSettle();
-      expect(find.text('Welcome'), findsOneWidget);
+      expect(find.text('Rapid.'), findsOneWidget);
       // Reset for other tests
       isAuthenticated = true;
     });
