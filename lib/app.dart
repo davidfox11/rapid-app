@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/debug/widget_catalog_screen.dart';
+import 'config/routes.dart';
 import 'theme/app_theme.dart';
 
 class RapidApp extends StatelessWidget {
@@ -8,11 +8,11 @@ class RapidApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Rapid',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
-      home: const WidgetCatalogScreen(),
+      routerConfig: router,
     );
   }
 }
