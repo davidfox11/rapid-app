@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -104,15 +105,23 @@ class HubScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // ── Title ────────────────────────────────
-              Text('The Hub', style: AppTypography.serifH(fontSize: 36)),
-              const SizedBox(height: 4),
-              Text(
-                'Ready for another round?',
-                style: GoogleFonts.bricolageGrotesque(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
-              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('The Hub', style: AppTypography.serifH(fontSize: 36)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ready for another round?',
+                    style: GoogleFonts.bricolageGrotesque(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              )
+                  .animate()
+                  .fadeIn(duration: 400.ms, curve: Curves.easeOut)
+                  .slideY(begin: 0.03, duration: 400.ms, curve: Curves.easeOutCubic),
               const SizedBox(height: 20),
 
               // ── CTA ──────────────────────────────────
@@ -133,7 +142,10 @@ class HubScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
-              ),
+              )
+                  .animate()
+                  .fadeIn(delay: 100.ms, duration: 400.ms, curve: Curves.easeOut)
+                  .slideY(begin: 0.05, delay: 100.ms, duration: 400.ms, curve: Curves.easeOutCubic),
               const SizedBox(height: 24),
 
               // ── Stats row ────────────────────────────
@@ -179,7 +191,10 @@ class HubScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
-              ),
+              )
+                  .animate()
+                  .fadeIn(delay: 200.ms, duration: 400.ms, curve: Curves.easeOut)
+                  .slideY(begin: 0.05, delay: 200.ms, duration: 400.ms, curve: Curves.easeOutCubic),
               const SizedBox(height: 24),
 
               // ── Social Pulse ─────────────────────────
@@ -245,7 +260,9 @@ class HubScreen extends ConsumerWidget {
                   },
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 20)
+                  .animate()
+                  .fadeIn(delay: 300.ms, duration: 400.ms),
 
               // ── Recent Matches ───────────────────────
               _SectionHeader(

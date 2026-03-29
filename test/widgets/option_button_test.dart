@@ -109,7 +109,7 @@ void main() {
 
       final animatedScale =
           tester.widget<AnimatedScale>(find.byType(AnimatedScale));
-      expect(animatedScale.scale, 0.97);
+      expect(animatedScale.scale, 0.96);
 
       await gesture.up();
       await tester.pumpAndSettle();

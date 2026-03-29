@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../screens/dev/storybook_screen.dart';
 import '../screens/game_setup/category_select_screen.dart';
 import '../screens/game_setup/countdown_screen.dart';
 import '../screens/game_setup/select_opponent_screen.dart';
@@ -18,7 +19,7 @@ bool isAuthenticated = true;
 // ── Transition builders ────────────────────────────────
 
 const _duration = Duration(milliseconds: 350);
-const _fastDuration = Duration(milliseconds: 250);
+const _fastDuration = Duration(milliseconds: 280);
 
 CustomTransitionPage<void> _slideFromRight(GoRouterState state, Widget child) {
   return CustomTransitionPage(
@@ -27,9 +28,18 @@ CustomTransitionPage<void> _slideFromRight(GoRouterState state, Widget child) {
     transitionDuration: _duration,
     reverseTransitionDuration: _duration,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final tween = Tween(begin: const Offset(1, 0), end: Offset.zero)
+      // Slide with subtle fade for depth
+      final slideTween = Tween(begin: const Offset(0.25, 0), end: Offset.zero)
           .chain(CurveTween(curve: Curves.easeOutCubic));
-      return SlideTransition(position: animation.drive(tween), child: child);
+      final fadeTween = Tween(begin: 0.0, end: 1.0)
+          .chain(CurveTween(curve: Curves.easeOut));
+      return SlideTransition(
+        position: animation.drive(slideTween),
+        child: FadeTransition(
+          opacity: animation.drive(fadeTween),
+          child: child,
+        ),
+      );
     },
   );
 }
@@ -76,7 +86,9 @@ CustomTransitionPage<void> _slideUp(GoRouterState state, Widget child) {
 final router = GoRouter(
   initialLocation: '/home',
   redirect: (context, state) {
-    if (!isAuthenticated && state.uri.path != '/') {
+    if (!isAuthenticated &&
+        state.uri.path != '/' &&
+        state.uri.path != '/dev') {
       return '/';
     }
     if (isAuthenticated && state.uri.path == '/') {
@@ -145,6 +157,13 @@ final router = GoRouter(
       path: '/game-summary',
       pageBuilder: (context, state) =>
           _slideUp(state, const GameSummaryScreen()),
+    ),
+
+    // Dev storybook
+    GoRoute(
+      path: '/dev',
+      pageBuilder: (context, state) =>
+          _fadeThrough(state, const StorybookScreen()),
     ),
   ],
 );

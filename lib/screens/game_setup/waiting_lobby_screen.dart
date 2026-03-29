@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -257,7 +258,7 @@ class _WaitingLobbyScreenState extends ConsumerState<WaitingLobbyScreen> {
               ),
               const SizedBox(height: 32),
 
-              // Status message
+              // Status message — breathing pulse
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -273,7 +274,9 @@ class _WaitingLobbyScreenState extends ConsumerState<WaitingLobbyScreen> {
                     color: AppColors.textSecondary,
                   ),
                 ),
-              ),
+              )
+                  .animate(onPlay: (c) => c.repeat(reverse: true))
+                  .fadeIn(begin: 0.5, duration: 1500.ms, curve: Curves.easeInOut),
 
               const Spacer(),
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_colors.dart';
@@ -173,34 +174,51 @@ class _ClayButtonBase extends StatelessWidget {
         textColor = Colors.white;
         shadows = [
           const BoxShadow(
-            offset: Offset(0, 6),
-            color: Color(0xFF7C2D12),
+            offset: Offset(0, 4),
+            blurRadius: 12,
+            color: Color(0x607C2D12),
           ),
         ];
         border = null;
     }
 
     final child = AnimatedScale(
-      scale: pressing ? 0.97 : 1.0,
-      duration: const Duration(milliseconds: 100),
+      scale: pressing ? 0.96 : 1.0,
+      duration: Duration(milliseconds: pressing ? 80 : 200),
+      curve: pressing ? Curves.easeOut : Curves.easeOutBack,
       child: Container(
         width: isFullWidth ? double.infinity : null,
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
         decoration: BoxDecoration(
-          gradient: variant == _ClayVariant.primary && enabled
-              ? const LinearGradient(
+          gradient: variant == _ClayVariant.primary
+              ? LinearGradient(
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
-                  colors: [
-                    Color(0xFFD4883A), // warm amber-brown
-                    Color(0xFFBF6B2A), // amber-orange mid
-                    Color(0xFF9C4A1A), // deeper burnt orange
-                  ],
+                  colors: enabled
+                      ? const [
+                          Color(0xFFDEA04A), // warm amber
+                          Color(0xFFCC7E35), // amber-orange
+                          Color(0xFFB56828), // deeper amber
+                        ]
+                      : const [
+                          Color(0xFF6B5030), // muted amber
+                          Color(0xFF5A4028), // muted mid
+                          Color(0xFF4A3420), // muted dark
+                        ],
                 )
-              : null,
-          color: variant == _ClayVariant.primary && enabled
+              : (variant == _ClayVariant.danger && enabled
+                  ? const LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Color(0xFFF67020), // bright orange
+                        Color(0xFFE05510), // deeper orange
+                      ],
+                    )
+                  : null),
+          color: variant == _ClayVariant.primary || (variant == _ClayVariant.danger && enabled)
               ? null
-              : (enabled ? bg : bg.withValues(alpha: 0.5)),
+              : (enabled ? bg : bg.withValues(alpha: 0.4)),
           borderRadius: BorderRadius.circular(18),
           border: border,
           boxShadow: enabled ? shadows : [],
@@ -228,7 +246,12 @@ class _ClayButtonBase extends StatelessWidget {
     );
 
     return GestureDetector(
-      onTapDown: enabled ? (_) => onPressChange(true) : null,
+      onTapDown: enabled
+          ? (_) {
+              onPressChange(true);
+              HapticFeedback.lightImpact();
+            }
+          : null,
       onTapUp: enabled
           ? (_) {
               onPressChange(false);

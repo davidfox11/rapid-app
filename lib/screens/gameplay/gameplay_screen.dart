@@ -165,9 +165,15 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
       if (game.phase == GamePhase.revealing && prev != GamePhase.revealing) {
         _stopTimer();
         if (game.yourCorrect == true) {
-          HapticFeedback.heavyImpact();
-        } else {
+          // Celebration: rapid successive light pulses
           HapticFeedback.lightImpact();
+          Future.delayed(const Duration(milliseconds: 80), () =>
+              HapticFeedback.lightImpact());
+          Future.delayed(const Duration(milliseconds: 160), () =>
+              HapticFeedback.lightImpact());
+        } else {
+          // Muted: single heavy thud
+          HapticFeedback.heavyImpact();
         }
         WidgetsBinding.instance
             .addPostFrameCallback((_) => _startRevealCountdown());

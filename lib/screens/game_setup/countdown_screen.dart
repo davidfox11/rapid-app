@@ -152,7 +152,10 @@ class _CountdownScreenState extends ConsumerState<CountdownScreen>
                     builder: (context, _) {
                       final elapsed = _controller.value * 3;
                       final beatProgress = elapsed - elapsed.floor();
-                      final scale = 1.2 - (0.2 * beatProgress);
+                      // Spring curve: overshoot then settle
+                      final t = Curves.easeOutBack.transform(
+                          beatProgress.clamp(0.0, 1.0));
+                      final scale = 1.3 - (0.3 * t);
 
                       return Transform.scale(
                         scale: scale,

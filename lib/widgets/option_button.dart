@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_colors.dart';
@@ -75,8 +76,9 @@ class _OptionButtonState extends State<OptionButton> {
     }
 
     final content = AnimatedScale(
-      scale: _pressing ? 0.97 : 1.0,
-      duration: const Duration(milliseconds: 100),
+      scale: _pressing ? 0.96 : 1.0,
+      duration: Duration(milliseconds: _pressing ? 80 : 200),
+      curve: _pressing ? Curves.easeOut : Curves.easeOutBack,
       child: Opacity(
         opacity: widget.state == OptionState.dimmed ? 0.3 : 1.0,
         child: Container(
@@ -144,7 +146,12 @@ class _OptionButtonState extends State<OptionButton> {
     );
 
     return GestureDetector(
-      onTapDown: tappable ? (_) => setState(() => _pressing = true) : null,
+      onTapDown: tappable
+          ? (_) {
+              setState(() => _pressing = true);
+              HapticFeedback.lightImpact();
+            }
+          : null,
       onTapUp: tappable
           ? (_) {
               setState(() => _pressing = false);
