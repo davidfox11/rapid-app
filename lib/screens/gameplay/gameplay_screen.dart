@@ -12,9 +12,11 @@ import '../../models/game_state.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/game_provider.dart';
 import '../../providers/game_setup_provider.dart';
+import '../../widgets/confirm_dialog.dart';
 import '../../widgets/data_label.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/home_indicator.dart';
+import '../../widgets/icon_circle.dart';
 import '../../widgets/option_button.dart';
 import '../../widgets/rapid_avatar.dart';
 import '../../widgets/round_dots.dart';
@@ -117,6 +119,27 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
     });
   }
 
+  Future<void> _confirmExit() async {
+    _stopTimer();
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Quit Match?',
+      message: 'You\'ll forfeit this game and it will count as a loss.',
+      confirmLabel: 'Leave',
+      cancelLabel: 'Stay',
+    );
+    if (confirmed && mounted) {
+      ref.read(gameProvider.notifier).endGame();
+      context.go('/home');
+    } else if (mounted) {
+      // Resume timer if they chose to stay and game is still active
+      final game = ref.read(gameProvider);
+      if (game?.phase == GamePhase.active) {
+        _startTimer();
+      }
+    }
+  }
+
   GamePhase? _lastPhase;
 
   @override
@@ -169,8 +192,18 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
             children: [
               const SizedBox(height: 8),
 
-              // Score bar
-              ScoreBar(
+              // Exit button + Score bar
+              Row(
+                children: [
+                  IconCircle(
+                    size: 30,
+                    onTap: _confirmExit,
+                    child: const Icon(Icons.close,
+                        color: AppColors.textSecondary, size: 14),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ScoreBar(
                 playerAvatar: RapidAvatar(
                   avatarUrl: user.avatarUrl,
                   defaultAvatarIndex: user.defaultAvatarIndex,
@@ -183,7 +216,10 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
                   size: 26,
                 ),
                 opponentScore: game.theirScore,
-                categoryLabel: game.categoryName,
+                    categoryLabel: game.categoryName,
+                  ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 

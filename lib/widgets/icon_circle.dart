@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
-
 class IconCircle extends StatelessWidget {
   const IconCircle({
     super.key,
@@ -20,9 +18,11 @@ class IconCircle extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.glassPanel,
+        color: const Color.fromRGBO(255, 255, 255, 0.05),
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.glassStroke),
+        border: Border.all(
+          color: const Color.fromRGBO(255, 255, 255, 0.10),
+        ),
       ),
       child: Center(child: child),
     );

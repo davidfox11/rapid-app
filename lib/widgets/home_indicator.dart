@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class HomeIndicator extends StatelessWidget {
@@ -5,6 +6,10 @@ class HomeIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Only show on iOS — other platforms have their own navigation
+    if (defaultTargetPlatform != TargetPlatform.iOS) {
+      return const SizedBox(height: 8);
+    }
     return Center(
       child: Container(
         width: 134,

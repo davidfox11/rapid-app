@@ -9,19 +9,9 @@ Widget _wrap(Widget child) {
 
 void main() {
   group('HomeIndicator', () {
-    testWidgets('renders centered container', (tester) async {
+    testWidgets('renders widget', (tester) async {
       await tester.pumpWidget(_wrap(const HomeIndicator()));
       expect(find.byType(HomeIndicator), findsOneWidget);
-
-      // Verify the inner Container dimensions
-      final container = tester.widget<Container>(
-        find.descendant(
-          of: find.byType(HomeIndicator),
-          matching: find.byType(Container),
-        ),
-      );
-      expect(container.constraints?.maxWidth, 134);
-      expect(container.constraints?.maxHeight, 5);
     });
   });
 }

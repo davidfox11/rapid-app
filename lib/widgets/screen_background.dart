@@ -27,50 +27,91 @@ class ScreenBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Base fill
-        Container(color: AppColors.bgDeep),
-
-        // Overlay 1: large plum glow from top-center (ellipse 120% 50%)
-        Container(
-          decoration: const BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment.topCenter,
-              radius: 0.85,
-              transform: _EllipticalTransform(1.2, 0.5),
-              colors: [Color.fromRGBO(42, 20, 56, 0.7), Colors.transparent],
+    return DefaultTextStyle(
+      style: const TextStyle(
+        decoration: TextDecoration.none,
+        color: AppColors.textPrimary,
+      ),
+      child: Stack(
+        children: [
+          // Base fill — deep indigo-purple, not pure black
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF1A1530), // warm purple at top
+                  Color(0xFF110E20), // deeper purple-black
+                  Color(0xFF0D0B18), // near-black at bottom
+                ],
+                stops: [0.0, 0.5, 1.0],
+              ),
             ),
           ),
-        ),
 
-        // Overlay 2: secondary plum from top-left (ellipse 80% 30%)
-        Container(
-          decoration: const BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment(-0.6, -0.8),
-              radius: 0.55,
-              transform: _EllipticalTransform(0.8, 0.3),
-              colors: [Color.fromRGBO(60, 20, 40, 0.3), Colors.transparent],
+          // Overlay 1: large plum glow from top-center — stronger
+          Container(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.topCenter,
+                radius: 0.85,
+                transform: _EllipticalTransform(1.2, 0.5),
+                colors: [
+                  Color.fromRGBO(55, 30, 80, 0.8),
+                  Colors.transparent,
+                ],
+              ),
             ),
           ),
-        ),
 
-        // Overlay 3: faint amber highlight from top-right (ellipse 60% 40%)
-        Container(
-          decoration: const BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment(0.6, -0.9),
-              radius: 0.5,
-              transform: _EllipticalTransform(0.6, 0.4),
-              colors: [Color.fromRGBO(255, 191, 94, 0.03), Colors.transparent],
+          // Overlay 2: secondary plum from top-left
+          Container(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(-0.6, -0.8),
+                radius: 0.55,
+                transform: _EllipticalTransform(0.8, 0.3),
+                colors: [
+                  Color.fromRGBO(70, 25, 55, 0.4),
+                  Colors.transparent,
+                ],
+              ),
             ),
           ),
-        ),
 
-        // Child content
-        child,
-      ],
+          // Overlay 3: subtle warm amber at center-top
+          Container(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(0.0, -0.3),
+                radius: 0.6,
+                colors: [
+                  Color.fromRGBO(255, 191, 94, 0.04),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+
+          // Overlay 4: very subtle blue-purple edge lighting
+          Container(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(0.8, -0.9),
+                radius: 0.5,
+                colors: [
+                  Color.fromRGBO(80, 60, 140, 0.15),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+
+          // Child content
+          child,
+        ],
+      ),
     );
   }
 }

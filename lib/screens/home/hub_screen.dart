@@ -16,11 +16,25 @@ import '../../widgets/home_indicator.dart';
 import '../../widgets/icon_circle.dart';
 import '../../widgets/pill_widget.dart';
 import '../../widgets/pub_rating_card.dart';
+import '../../widgets/incoming_challenge_overlay.dart';
 import '../../widgets/rapid_avatar.dart';
 import '../../widgets/screen_background.dart';
 
 class HubScreen extends ConsumerWidget {
   const HubScreen({super.key});
+
+  void _showMockChallenge(BuildContext context) {
+    showIncomingChallenge(
+      context,
+      challengerName: 'Ciarán',
+      challengerAvatarIndex: 2,
+      categoryName: 'Movies',
+      h2hYou: 5,
+      h2hThem: 7,
+      onAccept: () => context.go('/countdown'),
+      onDecline: () {},
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,7 +42,14 @@ class HubScreen extends ConsumerWidget {
     final friends = ref.watch(friendsProvider);
     final matches = ref.watch(matchesProvider);
 
-    return ScreenBackground(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: FloatingActionButton.small(
+        backgroundColor: AppColors.glassPanel,
+        onPressed: () => _showMockChallenge(context),
+        child: const Icon(Icons.bolt, color: AppColors.amberGlow, size: 18),
+      ),
+      body: ScreenBackground(
       child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
@@ -311,6 +332,7 @@ class HubScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

@@ -140,25 +140,34 @@ class _ClayButtonBase extends StatelessWidget {
 
     switch (variant) {
       case _ClayVariant.primary:
-        bg = AppColors.amberGlow;
-        textColor = Colors.black;
+        bg = AppColors.amberGlow; // fallback, gradient used below
+        textColor = const Color(0xFFFFF5E8); // warm white
         shadows = [
           const BoxShadow(
-            offset: Offset(0, 6),
-            color: Color(0xFFB45309),
+            offset: Offset(0, 4),
+            blurRadius: 12,
+            color: Color(0x60B45309),
           ),
           BoxShadow(
-            offset: const Offset(0, 6),
-            blurRadius: 20,
-            color: AppColors.amberGlow.withValues(alpha: 0.2),
+            offset: const Offset(0, 8),
+            blurRadius: 24,
+            color: AppColors.amberGlow.withValues(alpha: 0.15),
           ),
         ];
         border = null;
       case _ClayVariant.secondary:
-        bg = AppColors.glassPanel;
+        bg = const Color.fromRGBO(255, 255, 255, 0.05);
         textColor = AppColors.textPrimary;
-        shadows = [];
-        border = Border.all(color: AppColors.glassStrokeLight);
+        shadows = [
+          const BoxShadow(
+            offset: Offset(0, 2),
+            blurRadius: 8,
+            color: Color.fromRGBO(0, 0, 0, 0.3),
+          ),
+        ];
+        border = Border.all(
+          color: const Color.fromRGBO(255, 255, 255, 0.12),
+        );
       case _ClayVariant.danger:
         bg = AppColors.blazeOrange;
         textColor = Colors.white;
@@ -178,7 +187,20 @@ class _ClayButtonBase extends StatelessWidget {
         width: isFullWidth ? double.infinity : null,
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
         decoration: BoxDecoration(
-          color: enabled ? bg : bg.withValues(alpha: 0.5),
+          gradient: variant == _ClayVariant.primary && enabled
+              ? const LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Color(0xFFD4883A), // warm amber-brown
+                    Color(0xFFBF6B2A), // amber-orange mid
+                    Color(0xFF9C4A1A), // deeper burnt orange
+                  ],
+                )
+              : null,
+          color: variant == _ClayVariant.primary && enabled
+              ? null
+              : (enabled ? bg : bg.withValues(alpha: 0.5)),
           borderRadius: BorderRadius.circular(18),
           border: border,
           boxShadow: enabled ? shadows : [],

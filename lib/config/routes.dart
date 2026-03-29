@@ -7,14 +7,71 @@ import '../screens/game_setup/select_opponent_screen.dart';
 import '../screens/game_setup/waiting_lobby_screen.dart';
 import '../screens/gameplay/gameplay_screen.dart';
 import '../screens/home/hub_screen.dart';
+import '../screens/postgame/game_summary_screen.dart';
 import '../screens/onboarding/profile_setup_screen.dart';
 import '../screens/onboarding/welcome_screen.dart';
 import '../screens/social/add_friend_screen.dart';
-import '../theme/app_typography.dart';
-import '../widgets/screen_background.dart';
 
 // Hardcoded for development — will be replaced by auth provider
 bool isAuthenticated = true;
+
+// ── Transition builders ────────────────────────────────
+
+const _duration = Duration(milliseconds: 350);
+const _fastDuration = Duration(milliseconds: 250);
+
+CustomTransitionPage<void> _slideFromRight(GoRouterState state, Widget child) {
+  return CustomTransitionPage(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: _duration,
+    reverseTransitionDuration: _duration,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final tween = Tween(begin: const Offset(1, 0), end: Offset.zero)
+          .chain(CurveTween(curve: Curves.easeOutCubic));
+      return SlideTransition(position: animation.drive(tween), child: child);
+    },
+  );
+}
+
+CustomTransitionPage<void> _fadeThrough(GoRouterState state, Widget child) {
+  return CustomTransitionPage(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: _fastDuration,
+    reverseTransitionDuration: _fastDuration,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurveTween(curve: Curves.easeOut).animate(animation),
+        child: child,
+      );
+    },
+  );
+}
+
+CustomTransitionPage<void> _slideUp(GoRouterState state, Widget child) {
+  return CustomTransitionPage(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: _duration,
+    reverseTransitionDuration: _duration,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final tween = Tween(begin: const Offset(0, 0.15), end: Offset.zero)
+          .chain(CurveTween(curve: Curves.easeOutCubic));
+      final fadeTween = Tween(begin: 0.0, end: 1.0)
+          .chain(CurveTween(curve: Curves.easeOut));
+      return SlideTransition(
+        position: animation.drive(tween),
+        child: FadeTransition(
+          opacity: animation.drive(fadeTween),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+// ── Router ─────────────────────────────────────────────
 
 final router = GoRouter(
   initialLocation: '/home',
@@ -28,59 +85,66 @@ final router = GoRouter(
     return null;
   },
   routes: [
+    // Onboarding — fade
     GoRoute(
       path: '/',
-      builder: (context, state) => const WelcomeScreen(),
+      pageBuilder: (context, state) =>
+          _fadeThrough(state, const WelcomeScreen()),
     ),
     GoRoute(
       path: '/profile-setup',
-      builder: (context, state) => const ProfileSetupScreen(),
+      pageBuilder: (context, state) =>
+          _slideFromRight(state, const ProfileSetupScreen()),
     ),
+
+    // Hub — fade (feels like arriving home)
     GoRoute(
       path: '/home',
-      builder: (context, state) => const HubScreen(),
+      pageBuilder: (context, state) =>
+          _fadeThrough(state, const HubScreen()),
     ),
+
+    // Social — slide from right
     GoRoute(
       path: '/add-friend',
-      builder: (context, state) => const AddFriendScreen(),
+      pageBuilder: (context, state) =>
+          _slideFromRight(state, const AddFriendScreen()),
     ),
+
+    // Game setup — slide from right (linear flow)
     GoRoute(
       path: '/select-opponent',
-      builder: (context, state) => const SelectOpponentScreen(),
+      pageBuilder: (context, state) =>
+          _slideFromRight(state, const SelectOpponentScreen()),
     ),
     GoRoute(
       path: '/category-select',
-      builder: (context, state) => const CategorySelectScreen(),
+      pageBuilder: (context, state) =>
+          _slideFromRight(state, const CategorySelectScreen()),
     ),
+
+    // Lobby → Countdown → Gameplay — fade (cinematic)
     GoRoute(
       path: '/waiting-lobby',
-      builder: (context, state) => const WaitingLobbyScreen(),
+      pageBuilder: (context, state) =>
+          _fadeThrough(state, const WaitingLobbyScreen()),
     ),
     GoRoute(
       path: '/countdown',
-      builder: (context, state) => const CountdownScreen(),
+      pageBuilder: (context, state) =>
+          _fadeThrough(state, const CountdownScreen()),
     ),
     GoRoute(
       path: '/gameplay',
-      builder: (context, state) => const GameplayScreen(),
+      pageBuilder: (context, state) =>
+          _fadeThrough(state, const GameplayScreen()),
     ),
+
+    // Post-game — slide up (results reveal)
     GoRoute(
       path: '/game-summary',
-      builder: (context, state) => const _Placeholder('Game Summary'),
+      pageBuilder: (context, state) =>
+          _slideUp(state, const GameSummaryScreen()),
     ),
   ],
 );
-
-class _Placeholder extends StatelessWidget {
-  const _Placeholder(this.name);
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    return ScreenBackground(
-      child: Center(
-        child: Text(name, style: AppTypography.serifH(fontSize: 36)),
-      ),
-    );
-  }
-}

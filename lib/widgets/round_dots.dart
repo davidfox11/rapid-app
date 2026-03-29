@@ -39,9 +39,9 @@ class RoundDots extends StatelessWidget {
         }
 
         return Padding(
-          padding: EdgeInsets.only(left: i > 0 ? 4 : 0),
+          padding: EdgeInsets.only(left: i > 0 ? 2 : 0),
           child: Container(
-            width: 24,
+            width: 18,
             height: 4,
             decoration: BoxDecoration(
               color: color,
