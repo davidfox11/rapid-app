@@ -4,8 +4,13 @@
 *.log
 *.pyc
 *.swp
+.DS_Store
 .buildlog/
 .history
+.idea/
+.metadata
+*.iml
+pubspec.lock
 
 
 
