@@ -5,6 +5,7 @@ import '../screens/game_setup/category_select_screen.dart';
 import '../screens/game_setup/countdown_screen.dart';
 import '../screens/game_setup/select_opponent_screen.dart';
 import '../screens/game_setup/waiting_lobby_screen.dart';
+import '../screens/gameplay/gameplay_screen.dart';
 import '../screens/home/hub_screen.dart';
 import '../screens/onboarding/profile_setup_screen.dart';
 import '../screens/onboarding/welcome_screen.dart';
@@ -61,7 +62,7 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/gameplay',
-      builder: (context, state) => const _Placeholder('Gameplay'),
+      builder: (context, state) => const GameplayScreen(),
     ),
     GoRoute(
       path: '/game-summary',
