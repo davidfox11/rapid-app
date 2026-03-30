@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,6 +13,7 @@ import '../../models/game_state.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/game_provider.dart';
 import '../../providers/game_setup_provider.dart';
+import '../../widgets/compact_score_bar.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/data_label.dart';
 import '../../widgets/glass_card.dart';
@@ -20,7 +22,6 @@ import '../../widgets/icon_circle.dart';
 import '../../widgets/option_button.dart';
 import '../../widgets/rapid_avatar.dart';
 import '../../widgets/round_dots.dart';
-import '../../widgets/score_bar.dart';
 import '../../widgets/screen_background.dart';
 import '../../widgets/timer_ring.dart';
 
@@ -76,8 +77,8 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
           timer.cancel();
           ref.read(gameProvider.notifier).handleTimeout();
         }
-        // Haptic on last 5 full seconds
-        if (_remainingSeconds <= 5 &&
+        // Haptic at 3, 2, 1 seconds only
+        if (_remainingSeconds <= 3 &&
             _remainingSeconds > 0 &&
             (_remainingSeconds * 10).round() % 10 == 0) {
           HapticFeedback.selectionClick();
@@ -162,17 +163,15 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
       if (game.phase == GamePhase.active && prev != GamePhase.active) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _startTimer());
       }
-      if (game.phase == GamePhase.revealing && prev != GamePhase.revealing) {
+      if (game.phase == GamePhase.revealed && prev != GamePhase.revealed) {
         _stopTimer();
         if (game.yourCorrect == true) {
-          // Celebration: rapid successive light pulses
           HapticFeedback.lightImpact();
           Future.delayed(const Duration(milliseconds: 80), () =>
               HapticFeedback.lightImpact());
           Future.delayed(const Duration(milliseconds: 160), () =>
               HapticFeedback.lightImpact());
         } else {
-          // Muted: single heavy thud
           HapticFeedback.heavyImpact();
         }
         WidgetsBinding.instance
@@ -180,15 +179,25 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
       }
     }
 
+    if (game.phase == GamePhase.revealed) {
+      return _buildRevealedPhase(game, user);
+    }
     if (game.phase == GamePhase.revealing) {
-      return _buildRevealPhase(game, user);
+      // Brief suspense — show the active/answered state still
+      return _buildActivePhase(game, user);
+    }
+    if (game.phase == GamePhase.preview) {
+      return _buildPreviewPhase(game, user);
     }
     return _buildActivePhase(game, user);
   }
 
-  Widget _buildActivePhase(ActiveGameState game, dynamic user) {
+  // ─── PREVIEW PHASE ─────────────────────────────────────────────
+
+  Widget _buildPreviewPhase(ActiveGameState game, dynamic user) {
     final q = game.currentQuestion;
-    final isAnswered = game.phase == GamePhase.answered;
+    final questionText = q?.text ?? '';
+    final fontSize = questionText.length > 120 ? 22.0 : 26.0;
 
     return ScreenBackground(
       child: SafeArea(
@@ -198,7 +207,7 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
             children: [
               const SizedBox(height: 8),
 
-              // Exit button + Score bar
+              // Exit button + CompactScoreBar
               Row(
                 children: [
                   IconCircle(
@@ -209,36 +218,136 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: ScoreBar(
-                playerAvatar: RapidAvatar(
-                  avatarUrl: user.avatarUrl,
-                  defaultAvatarIndex: user.defaultAvatarIndex,
-                  size: 26,
-                ),
-                playerScore: game.yourScore,
-                opponentAvatar: RapidAvatar(
-                  avatarUrl: game.opponentAvatarUrl,
-                  defaultAvatarIndex: game.opponentDefaultAvatarIndex,
-                  size: 26,
-                ),
-                opponentScore: game.theirScore,
-                    categoryLabel: game.categoryName,
-                  ),
+                    child: CompactScoreBar(
+                      playerAvatar: RapidAvatar(
+                        avatarUrl: user.avatarUrl,
+                        defaultAvatarIndex: user.defaultAvatarIndex,
+                        size: 28,
+                      ),
+                      playerScore: game.yourScore,
+                      opponentAvatar: RapidAvatar(
+                        avatarUrl: game.opponentAvatarUrl,
+                        defaultAvatarIndex: game.opponentDefaultAvatarIndex,
+                        size: 28,
+                      ),
+                      opponentScore: game.theirScore,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-              // Round indicator
+              // Round dots
+              RoundDots(
+                currentRound: game.currentRound,
+                totalRounds: game.totalRounds,
+                roundResults: game.roundResults,
+              ),
+              const SizedBox(height: 20),
+
+              // Category label + round label
+              Text(
+                game.categoryName.toUpperCase(),
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: AppColors.amberGlow,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              DataLabel('Round ${game.currentRound} of ${game.totalRounds}'),
+              const SizedBox(height: 24),
+
+              // Large centered question card
+              Expanded(
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 40, horizontal: 28),
+                    decoration: BoxDecoration(
+                      color: const Color.fromRGBO(255, 191, 94, 0.03),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color.fromRGBO(255, 191, 94, 0.15),
+                      ),
+                    ),
+                    child: Text(
+                      questionText,
+                      style: GoogleFonts.bricolageGrotesque(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.w700,
+                        height: 1.45,
+                        color: AppColors.textPrimary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+
+              const HomeIndicator(),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── ACTIVE PHASE ──────────────────────────────────────────────
+
+  Widget _buildActivePhase(ActiveGameState game, dynamic user) {
+    final q = game.currentQuestion;
+    final isAnswered = game.phase == GamePhase.answered ||
+        game.phase == GamePhase.revealing;
+    final questionText = q?.text ?? '';
+    final questionFontSize = questionText.length > 120 ? 15.0 : 17.0;
+
+    return ScreenBackground(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+
+              // Exit button + CompactScoreBar
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  DataLabel('Round ${game.currentRound} of ${game.totalRounds}'),
-                  RoundDots(
-                    currentRound: game.currentRound,
-                    totalRounds: game.totalRounds,
+                  IconCircle(
+                    size: 30,
+                    onTap: _confirmExit,
+                    child: const Icon(Icons.close,
+                        color: AppColors.textSecondary, size: 14),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: CompactScoreBar(
+                      playerAvatar: RapidAvatar(
+                        avatarUrl: user.avatarUrl,
+                        defaultAvatarIndex: user.defaultAvatarIndex,
+                        size: 28,
+                      ),
+                      playerScore: game.yourScore,
+                      opponentAvatar: RapidAvatar(
+                        avatarUrl: game.opponentAvatarUrl,
+                        defaultAvatarIndex: game.opponentDefaultAvatarIndex,
+                        size: 28,
+                      ),
+                      opponentScore: game.theirScore,
+                    ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+
+              // Round dots
+              RoundDots(
+                currentRound: game.currentRound,
+                totalRounds: game.totalRounds,
+                roundResults: game.roundResults,
               ),
               const SizedBox(height: 16),
 
@@ -246,39 +355,18 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
               TimerRing(
                 totalSeconds: 15,
                 remainingSeconds: _remainingSeconds,
+                size: 64,
               ),
-              const SizedBox(height: 16),
-
-              // Question card
-              if (q != null)
-                GlassCard(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 4),
-                    child: Center(
-                      child: Text(
-                        q.text,
-                        style: GoogleFonts.bricolageGrotesque(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          height: 1.45,
-                          color: AppColors.textPrimary,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ),
               const SizedBox(height: 8),
 
-              // Opponent status
+              // Opponent status (right-aligned)
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   RapidAvatar(
                     avatarUrl: game.opponentAvatarUrl,
                     defaultAvatarIndex: game.opponentDefaultAvatarIndex,
-                    size: 18,
+                    size: 16,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -292,9 +380,35 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
-              // Options
+              // Shrunk question card
+              if (q != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 22, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color.fromRGBO(255, 255, 255, 0.04),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color.fromRGBO(255, 255, 255, 0.06),
+                    ),
+                  ),
+                  child: Text(
+                    questionText,
+                    style: GoogleFonts.bricolageGrotesque(
+                      fontSize: questionFontSize,
+                      fontWeight: FontWeight.w700,
+                      height: 1.45,
+                      color: AppColors.textPrimary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              const SizedBox(height: 8),
+
+              // Options with staggered entrance
               if (q != null)
                 Expanded(
                   child: SingleChildScrollView(
@@ -320,7 +434,19 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
                                 ? () => _onOptionTap(i)
                                 : null,
                           ),
-                        );
+                        )
+                            .animate()
+                            .fadeIn(
+                              duration: 200.ms,
+                              delay: (80 * i).ms,
+                            )
+                            .moveY(
+                              begin: 20,
+                              end: 0,
+                              duration: 200.ms,
+                              delay: (80 * i).ms,
+                              curve: Curves.easeOut,
+                            );
                       }),
                     ),
                   ),
@@ -347,9 +473,35 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
     );
   }
 
-  Widget _buildRevealPhase(ActiveGameState game, dynamic user) {
+  // ─── REVEALED PHASE ────────────────────────────────────────────
+
+  Widget _buildRevealedPhase(ActiveGameState game, dynamic user) {
     final q = game.currentQuestion;
     final correctIdx = game.correctIndex ?? 0;
+
+    // Outcome text
+    final bothCorrect =
+        game.yourCorrect == true && game.theirCorrect == true;
+    final bothWrong =
+        game.yourCorrect != true && game.theirCorrect != true;
+    final youCorrect = game.yourCorrect == true;
+    final theyCorrect = game.theirCorrect == true;
+
+    String outcomeText;
+    Color outcomeColor;
+    if (bothCorrect) {
+      outcomeText = 'Both correct!';
+      outcomeColor = AppColors.signalGreen;
+    } else if (bothWrong) {
+      outcomeText = 'Both wrong!';
+      outcomeColor = AppColors.blazeOrange;
+    } else if (youCorrect) {
+      outcomeText = 'You got it!';
+      outcomeColor = AppColors.signalGreen;
+    } else {
+      outcomeText = 'They got it';
+      outcomeColor = AppColors.blazeOrange;
+    }
 
     return ScreenBackground(
       child: SafeArea(
@@ -359,129 +511,186 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
             children: [
               const SizedBox(height: 12),
 
-              // Header
-              DataLabel(game.categoryName),
-              const SizedBox(height: 6),
-              Text('Answered!', style: AppTypography.serifH(fontSize: 22)),
-              const SizedBox(height: 16),
+              // Category + round label centered
+              Text(
+                game.categoryName.toUpperCase(),
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 1.5,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              DataLabel('Round ${game.currentRound} of ${game.totalRounds}'),
+              const SizedBox(height: 12),
 
-              // Score delta row
+              // Reveal header
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  // You
+                  // You side
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: youCorrect
+                                  ? AppColors.signalGreen
+                                  : AppColors.blazeOrange,
+                              width: 2,
+                            ),
+                          ),
+                          child: RapidAvatar(
+                            avatarUrl: user.avatarUrl,
+                            defaultAvatarIndex: user.defaultAvatarIndex,
+                            size: 44,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'You',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        _PointBurstPill(
+                          points: game.yourPoints ?? 0,
+                          isFaster: (game.yourTimeMs ?? 99999) <
+                              (game.theirTimeMs ?? 0),
+                          isCorrect: youCorrect,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Center scores + outcome
                   Column(
                     children: [
-                      RapidAvatar(
-                        avatarUrl: user.avatarUrl,
-                        defaultAvatarIndex: user.defaultAvatarIndex,
-                        size: 36,
-                      ),
-                      const SizedBox(height: 4),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'You ',
+                            game.yourScore.toString(),
                             style: GoogleFonts.jetBrainsMono(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textSecondary,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: game.yourScore >= game.theirScore
+                                  ? AppColors.signalGreen
+                                  : AppColors.textSecondary,
                             ),
                           ),
                           Text(
-                            '(${game.yourScore})',
+                            ' - ',
                             style: GoogleFonts.jetBrainsMono(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: game.yourCorrect == true
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                          Text(
+                            game.theirScore.toString(),
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: game.theirScore >= game.yourScore
                                   ? AppColors.signalGreen
-                                  : AppColors.textTertiary,
+                                  : AppColors.textSecondary,
                             ),
                           ),
                         ],
-                      ),
-                      Text(
-                        '+${game.yourPoints ?? 0}',
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: game.yourCorrect == true
-                              ? AppColors.signalGreen
-                              : AppColors.blazeOrange,
-                        ),
-                      ),
-                    ],
-                  ),
-                  DataLabel(
-                    game.yourCorrect == true ? 'Correct' : 'Wrong',
-                  ),
-                  // Opponent
-                  Column(
-                    children: [
-                      RapidAvatar(
-                        avatarUrl: game.opponentAvatarUrl,
-                        defaultAvatarIndex: game.opponentDefaultAvatarIndex,
-                        size: 36,
                       ),
                       const SizedBox(height: 4),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${game.opponentName} ',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          Text(
-                            '(${game.theirScore})',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: game.theirCorrect == true
-                                  ? AppColors.signalGreen
-                                  : AppColors.textTertiary,
-                            ),
-                          ),
-                        ],
-                      ),
                       Text(
-                        '+${game.theirPoints ?? 0}',
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: game.theirCorrect == true
-                              ? AppColors.signalGreen
-                              : AppColors.blazeOrange,
+                        outcomeText,
+                        style: GoogleFonts.bricolageGrotesque(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: outcomeColor,
                         ),
                       ),
                     ],
+                  ),
+
+                  // Opponent side
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: theyCorrect
+                                  ? AppColors.signalGreen
+                                  : AppColors.blazeOrange,
+                              width: 2,
+                            ),
+                          ),
+                          child: RapidAvatar(
+                            avatarUrl: game.opponentAvatarUrl,
+                            defaultAvatarIndex: game.opponentDefaultAvatarIndex,
+                            size: 44,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          game.opponentName,
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        _PointBurstPill(
+                          points: game.theirPoints ?? 0,
+                          isFaster: (game.theirTimeMs ?? 99999) <
+                              (game.yourTimeMs ?? 0),
+                          isCorrect: theyCorrect,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
-              // Question card with correct answer
+              // Mini tug bar
+              _MiniTugBar(
+                yourScore: game.yourScore,
+                theirScore: game.theirScore,
+              ),
+              const SizedBox(height: 12),
+
+              // Question card + correct answer
               if (q != null)
-                GlassCard(
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 12, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color.fromRGBO(255, 255, 255, 0.04),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color.fromRGBO(255, 255, 255, 0.10),
+                    ),
+                  ),
                   child: Column(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 8, horizontal: 2),
-                        child: Text(
-                          q.text,
-                          style: GoogleFonts.bricolageGrotesque(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            height: 1.4,
-                            color: AppColors.textPrimary,
-                          ),
-                          textAlign: TextAlign.center,
+                      Text(
+                        q.text,
+                        style: GoogleFonts.bricolageGrotesque(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          height: 1.4,
+                          color: AppColors.textPrimary,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 10),
                       Row(
@@ -509,7 +718,7 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
                 ),
               const SizedBox(height: 8),
 
-              // Options with results
+              // Options with reveal state + pick tags
               if (q != null)
                 Expanded(
                   child: SingleChildScrollView(
@@ -518,84 +727,112 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
                         ...List.generate(q.options.length, (i) {
                           final letters = ['A', 'B', 'C', 'D'];
                           OptionState optState;
-                          Widget? playerAv;
-                          Widget? opponentAv;
+                          final isCorrectOption = i == correctIdx;
+                          final youPicked = i == game.yourChoice;
+                          final theyPicked = i == game.theirChoice;
 
-                          if (i == correctIdx) {
+                          if (isCorrectOption) {
                             optState = OptionState.correct;
-                          } else if (i == game.yourChoice ||
-                              i == game.theirChoice) {
+                          } else if (youPicked || theyPicked) {
                             optState = OptionState.wrong;
                           } else {
                             optState = OptionState.dimmed;
                           }
 
-                          if (i == game.yourChoice) {
-                            playerAv = Row(
+                          // Build pick tags
+                          Widget? trailing;
+                          if (youPicked || theyPicked) {
+                            final tags = <Widget>[];
+                            if (youPicked && game.yourChoice != -1) {
+                              tags.add(const _PickTag(label: 'YOU', isYou: true));
+                            }
+                            if (theyPicked) {
+                              tags.add(const _PickTag(label: 'THEM', isYou: false));
+                            }
+                            trailing = Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                RapidAvatar(
-                                  avatarUrl: user.avatarUrl,
-                                  defaultAvatarIndex:
-                                      user.defaultAvatarIndex,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  game.yourCorrect == true ? '\u2713' : '\u2717',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: game.yourCorrect == true
-                                        ? AppColors.signalGreen
-                                        : AppColors.blazeOrange,
-                                  ),
+                                const SizedBox(width: 8),
+                                ...tags.map((t) => Padding(
+                                      padding:
+                                          const EdgeInsets.only(left: 4),
+                                      child: t,
+                                    )),
+                                const SizedBox(width: 6),
+                                Icon(
+                                  isCorrectOption
+                                      ? Icons.check
+                                      : Icons.close,
+                                  size: 16,
+                                  color: isCorrectOption
+                                      ? AppColors.signalGreen
+                                      : AppColors.blazeOrange,
                                 ),
                               ],
                             );
-                          }
-                          if (i == game.theirChoice) {
-                            opponentAv = Row(
+                          } else if (isCorrectOption && bothWrong) {
+                            // Both wrong: show correct answer at 0.7 opacity
+                            // with CORRECT label
+                            trailing = Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                RapidAvatar(
-                                  avatarUrl: game.opponentAvatarUrl,
-                                  defaultAvatarIndex:
-                                      game.opponentDefaultAvatarIndex,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  game.theirCorrect == true
-                                      ? '\u2713'
-                                      : '\u2717',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: game.theirCorrect == true
-                                        ? AppColors.signalGreen
-                                        : AppColors.blazeOrange,
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.signalGreen
+                                        .withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: AppColors.signalGreen
+                                          .withValues(alpha: 0.3),
+                                    ),
                                   ),
+                                  child: Text(
+                                    'CORRECT',
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.signalGreen,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(
+                                  Icons.check,
+                                  size: 16,
+                                  color: AppColors.signalGreen,
                                 ),
                               ],
                             );
                           }
 
+                          // Adjust opacity for unchosen wrong options
+                          final opacity = optState == OptionState.dimmed
+                              ? 0.25
+                              : (isCorrectOption && bothWrong ? 0.7 : 1.0);
+
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8),
-                            child: OptionButton(
-                              letter: letters[i],
-                              text: q.options[i],
-                              state: optState,
-                              playerAvatar: playerAv,
-                              opponentAvatar: opponentAv,
+                            child: Opacity(
+                              opacity: opacity,
+                              child: OptionButton(
+                                letter: letters[i],
+                                text: q.options[i],
+                                state: optState,
+                                playerAvatar: trailing,
+                              ),
                             ),
                           );
                         }),
 
-                        // Speed comparison
+                        // Speed comparison card
                         const SizedBox(height: 8),
                         GlassCardSmall(
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
                             children: [
                               Text.rich(
                                 TextSpan(
@@ -612,10 +849,11 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
                                       style: GoogleFonts.jetBrainsMono(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
-                                        color: (game.yourTimeMs ?? 99999) <
-                                                (game.theirTimeMs ?? 0)
-                                            ? AppColors.signalGreen
-                                            : AppColors.textSecondary,
+                                        color:
+                                            (game.yourTimeMs ?? 99999) <
+                                                    (game.theirTimeMs ?? 0)
+                                                ? AppColors.signalGreen
+                                                : AppColors.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -636,10 +874,11 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
                                       style: GoogleFonts.jetBrainsMono(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
-                                        color: (game.theirTimeMs ?? 99999) <
-                                                (game.yourTimeMs ?? 0)
-                                            ? AppColors.signalGreen
-                                            : AppColors.textSecondary,
+                                        color:
+                                            (game.theirTimeMs ?? 99999) <
+                                                    (game.yourTimeMs ?? 0)
+                                                ? AppColors.signalGreen
+                                                : AppColors.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -651,7 +890,8 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
 
                         // Auto-advance countdown
                         Padding(
-                          padding: const EdgeInsets.only(top: 12, bottom: 8),
+                          padding:
+                              const EdgeInsets.only(top: 12, bottom: 8),
                           child: Text(
                             game.currentRound >= game.totalRounds
                                 ? 'Results in ${_revealCountdown}s...'
@@ -669,6 +909,140 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> {
 
               const HomeIndicator(),
               const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Point Burst Pill ──────────────────────────────────────────
+
+class _PointBurstPill extends StatelessWidget {
+  const _PointBurstPill({
+    required this.points,
+    required this.isFaster,
+    required this.isCorrect,
+  });
+
+  final int points;
+  final bool isFaster;
+  final bool isCorrect;
+
+  @override
+  Widget build(BuildContext context) {
+    final isZero = points == 0;
+    final Color bgColor;
+    final Color borderColor;
+    final Color textColor;
+    final String label;
+
+    if (isZero) {
+      bgColor = const Color.fromRGBO(255, 255, 255, 0.04);
+      borderColor = const Color.fromRGBO(255, 255, 255, 0.08);
+      textColor = AppColors.textTertiary;
+      label = '+0';
+    } else {
+      bgColor = const Color.fromRGBO(0, 246, 101, 0.12);
+      borderColor = AppColors.signalGreen.withValues(alpha: 0.3);
+      textColor = AppColors.signalGreen;
+      label = isFaster ? '+$points \u26A1' : '+$points';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.jetBrainsMono(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Pick Tag ──────────────────────────────────────────────────
+
+class _PickTag extends StatelessWidget {
+  const _PickTag({required this.label, required this.isYou});
+
+  final String label;
+  final bool isYou;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isYou
+            ? const Color.fromRGBO(255, 191, 94, 0.15)
+            : const Color.fromRGBO(255, 255, 255, 0.06),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: isYou
+              ? AppColors.amberGlow.withValues(alpha: 0.3)
+              : const Color.fromRGBO(255, 255, 255, 0.12),
+        ),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.jetBrainsMono(
+          fontSize: 8,
+          fontWeight: FontWeight.w700,
+          color: isYou ? AppColors.amberGlow : AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Mini Tug Bar (used in revealed phase) ─────────────────────
+
+class _MiniTugBar extends StatelessWidget {
+  const _MiniTugBar({
+    required this.yourScore,
+    required this.theirScore,
+  });
+
+  final int yourScore;
+  final int theirScore;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = yourScore + theirScore;
+    final yourFraction = total > 0 ? yourScore / total : 0.5;
+
+    return SizedBox(
+      height: 4,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color.fromRGBO(255, 255, 255, 0.06),
+          borderRadius: BorderRadius.circular(2),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: Row(
+            children: [
+              Flexible(
+                flex: (yourFraction * 1000).round().clamp(1, 999),
+                child: Container(
+                  color: AppColors.amberGlow.withValues(alpha: 0.6),
+                ),
+              ),
+              Flexible(
+                flex: ((1 - yourFraction) * 1000).round().clamp(1, 999),
+                child: Container(
+                  color: AppColors.signalGreen.withValues(alpha: 0.6),
+                ),
+              ),
             ],
           ),
         ),

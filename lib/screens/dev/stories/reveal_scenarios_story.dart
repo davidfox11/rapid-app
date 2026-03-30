@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../theme/app_colors.dart';
-import '../../../widgets/data_label.dart';
 import '../../../widgets/glass_card.dart';
 import '../../../widgets/option_button.dart';
 import '../../../widgets/rapid_avatar.dart';
 
-/// Shows all 4 answer reveal combinations
+/// Shows all 4 answer reveal combinations with pick tags and point burst pills
 class RevealScenariosStory extends StatelessWidget {
   const RevealScenariosStory({super.key});
 
@@ -104,6 +103,27 @@ class _ScenarioBlock extends StatelessWidget {
     const options = ['Atlantic Ocean', 'Pacific Ocean', 'Indian Ocean', 'Arctic Ocean'];
     const letters = ['A', 'B', 'C', 'D'];
 
+    final yourPoints = _calcPoints(yourCorrect, yourTimeMs);
+    final theirPoints = _calcPoints(theirCorrect, theirTimeMs);
+    final bothWrong = !yourCorrect && !theirCorrect;
+
+    // Outcome text
+    String outcomeText;
+    Color outcomeColor;
+    if (yourCorrect && theirCorrect) {
+      outcomeText = 'Both correct!';
+      outcomeColor = AppColors.signalGreen;
+    } else if (bothWrong) {
+      outcomeText = 'Both wrong!';
+      outcomeColor = AppColors.blazeOrange;
+    } else if (yourCorrect) {
+      outcomeText = 'You got it!';
+      outcomeColor = AppColors.signalGreen;
+    } else {
+      outcomeText = 'They got it';
+      outcomeColor = AppColors.blazeOrange;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -126,42 +146,91 @@ class _ScenarioBlock extends StatelessWidget {
         ),
         const SizedBox(height: 12),
 
-        // Score delta row
+        // Reveal header with avatars, point burst pills, and outcome
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
+            // You side
+            Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: yourCorrect
+                            ? AppColors.signalGreen
+                            : AppColors.blazeOrange,
+                        width: 2,
+                      ),
+                    ),
+                    child: const RapidAvatar(defaultAvatarIndex: 1, size: 32),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'You',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  _PointBurstPill(
+                    points: yourPoints,
+                    isFaster: yourTimeMs < theirTimeMs,
+                    isCorrect: yourCorrect,
+                  ),
+                ],
+              ),
+            ),
+
+            // Center: outcome
             Column(
               children: [
-                const RapidAvatar(defaultAvatarIndex: 1, size: 32),
-                const SizedBox(height: 4),
                 Text(
-                  yourCorrect ? '+${_calcPoints(yourTimeMs)}' : '+0',
-                  style: GoogleFonts.jetBrainsMono(
+                  outcomeText,
+                  style: GoogleFonts.bricolageGrotesque(
                     fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: yourCorrect
-                        ? AppColors.signalGreen
-                        : AppColors.blazeOrange,
+                    fontWeight: FontWeight.w700,
+                    color: outcomeColor,
                   ),
                 ),
               ],
             ),
-            DataLabel(yourCorrect ? 'Correct' : 'Wrong'),
-            Column(
-              children: [
-                const RapidAvatar(defaultAvatarIndex: 6, size: 32),
-                const SizedBox(height: 4),
-                Text(
-                  theirCorrect ? '+${_calcPoints(theirTimeMs)}' : '+0',
-                  style: GoogleFonts.jetBrainsMono(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: theirCorrect
-                        ? AppColors.signalGreen
-                        : AppColors.blazeOrange,
+
+            // Opponent side
+            Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: theirCorrect
+                            ? AppColors.signalGreen
+                            : AppColors.blazeOrange,
+                        width: 2,
+                      ),
+                    ),
+                    child: const RapidAvatar(defaultAvatarIndex: 6, size: 32),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    'Sarah',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  _PointBurstPill(
+                    points: theirPoints,
+                    isFaster: theirTimeMs < yourTimeMs,
+                    isCorrect: theirCorrect,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -193,65 +262,97 @@ class _ScenarioBlock extends StatelessWidget {
         ),
         const SizedBox(height: 8),
 
-        // Options with reveal state
+        // Options with reveal state + pick tags
         ...List.generate(4, (i) {
           OptionState state;
-          Widget? playerAv;
-          Widget? opponentAv;
+          final isCorrectOption = i == correctIndex;
+          final youPicked = i == yourChoice && yourChoice >= 0;
+          final theyPicked = i == theirChoice;
 
-          if (i == correctIndex) {
+          if (isCorrectOption) {
             state = OptionState.correct;
-          } else if (i == yourChoice || i == theirChoice) {
+          } else if (youPicked || theyPicked) {
             state = OptionState.wrong;
           } else {
             state = OptionState.dimmed;
           }
 
-          if (i == yourChoice && yourChoice >= 0) {
-            playerAv = Row(
+          // Build pick tags as trailing widget
+          Widget? trailing;
+          if (youPicked || theyPicked) {
+            final tags = <Widget>[];
+            if (youPicked) {
+              tags.add(const _PickTag(label: 'YOU', isYou: true));
+            }
+            if (theyPicked) {
+              tags.add(const _PickTag(label: 'THEM', isYou: false));
+            }
+            trailing = Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const RapidAvatar(defaultAvatarIndex: 1, size: 16),
-                const SizedBox(width: 3),
-                Text(
-                  yourCorrect ? '\u2713' : '\u2717',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: yourCorrect
-                        ? AppColors.signalGreen
-                        : AppColors.blazeOrange,
-                  ),
+                const SizedBox(width: 8),
+                ...tags.map((t) => Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: t,
+                    )),
+                const SizedBox(width: 6),
+                Icon(
+                  isCorrectOption ? Icons.check : Icons.close,
+                  size: 14,
+                  color: isCorrectOption
+                      ? AppColors.signalGreen
+                      : AppColors.blazeOrange,
                 ),
               ],
             );
-          }
-          if (i == theirChoice) {
-            opponentAv = Row(
+          } else if (isCorrectOption && bothWrong) {
+            trailing = Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const RapidAvatar(defaultAvatarIndex: 6, size: 16),
-                const SizedBox(width: 3),
-                Text(
-                  theirCorrect ? '\u2713' : '\u2717',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: theirCorrect
-                        ? AppColors.signalGreen
-                        : AppColors.blazeOrange,
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.signalGreen.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: AppColors.signalGreen.withValues(alpha: 0.3),
+                    ),
                   ),
+                  child: Text(
+                    'CORRECT',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.signalGreen,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.check,
+                  size: 14,
+                  color: AppColors.signalGreen,
                 ),
               ],
             );
           }
 
+          final opacity = state == OptionState.dimmed
+              ? 0.25
+              : (isCorrectOption && bothWrong ? 0.7 : 1.0);
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 6),
-            child: OptionButton(
-              letter: letters[i],
-              text: options[i],
-              state: state,
-              playerAvatar: playerAv,
-              opponentAvatar: opponentAv,
+            child: Opacity(
+              opacity: opacity,
+              child: OptionButton(
+                letter: letters[i],
+                text: options[i],
+                state: state,
+                playerAvatar: trailing,
+              ),
             ),
           );
         }),
@@ -289,9 +390,97 @@ class _ScenarioBlock extends StatelessWidget {
     );
   }
 
-  int _calcPoints(int timeMs) {
+  int _calcPoints(bool correct, int timeMs) {
+    if (!correct) return 0;
     if (timeMs >= 15000) return 0;
     final points = 1000 - (timeMs ~/ 15);
     return points < 100 ? 100 : points;
+  }
+}
+
+// ─── Point Burst Pill (Storybook version) ──────────────────────
+
+class _PointBurstPill extends StatelessWidget {
+  const _PointBurstPill({
+    required this.points,
+    required this.isFaster,
+    required this.isCorrect,
+  });
+
+  final int points;
+  final bool isFaster;
+  final bool isCorrect;
+
+  @override
+  Widget build(BuildContext context) {
+    final isZero = points == 0;
+    final Color bgColor;
+    final Color borderColor;
+    final Color textColor;
+    final String label;
+
+    if (isZero) {
+      bgColor = const Color.fromRGBO(255, 255, 255, 0.04);
+      borderColor = const Color.fromRGBO(255, 255, 255, 0.08);
+      textColor = AppColors.textTertiary;
+      label = '+0';
+    } else {
+      bgColor = const Color.fromRGBO(0, 246, 101, 0.12);
+      borderColor = AppColors.signalGreen.withValues(alpha: 0.3);
+      textColor = AppColors.signalGreen;
+      label = isFaster ? '+$points \u26A1' : '+$points';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.jetBrainsMono(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Pick Tag (Storybook version) ──────────────────────────────
+
+class _PickTag extends StatelessWidget {
+  const _PickTag({required this.label, required this.isYou});
+
+  final String label;
+  final bool isYou;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isYou
+            ? const Color.fromRGBO(255, 191, 94, 0.15)
+            : const Color.fromRGBO(255, 255, 255, 0.06),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: isYou
+              ? AppColors.amberGlow.withValues(alpha: 0.3)
+              : const Color.fromRGBO(255, 255, 255, 0.12),
+        ),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.jetBrainsMono(
+          fontSize: 8,
+          fontWeight: FontWeight.w700,
+          color: isYou ? AppColors.amberGlow : AppColors.textSecondary,
+        ),
+      ),
+    );
   }
 }

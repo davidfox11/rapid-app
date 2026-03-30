@@ -7,10 +7,14 @@ class RoundDots extends StatelessWidget {
     super.key,
     required this.currentRound,
     this.totalRounds = 10,
+    this.roundResults = const [],
   });
 
   final int currentRound;
   final int totalRounds;
+  /// Past round outcomes: 'you', 'them', 'draw', or 'none'.
+  /// Index 0 = round 1. If shorter than past rounds, falls back to old behavior.
+  final List<String> roundResults;
 
   @override
   Widget build(BuildContext context) {
@@ -24,17 +28,31 @@ class RoundDots extends StatelessWidget {
         Color color;
         List<BoxShadow>? shadows;
 
-        if (isPast || isCurrent) {
+        if (isPast && i < roundResults.length) {
+          // Use round result coloring
+          switch (roundResults[i]) {
+            case 'you':
+              color = AppColors.amberGlow;
+            case 'them':
+              color = AppColors.signalGreen;
+            case 'draw':
+              color = const Color.fromRGBO(255, 255, 255, 0.15);
+            default:
+              color = const Color.fromRGBO(255, 255, 255, 0.15);
+          }
+        } else if (isPast) {
+          // Fallback: old behavior — all past rounds amber
           color = AppColors.amberGlow;
-          shadows = isCurrent
-              ? [
-                  BoxShadow(
-                    color: AppColors.amberGlow.withValues(alpha: 0.4),
-                    blurRadius: 8,
-                  ),
-                ]
-              : null;
+        } else if (isCurrent) {
+          color = AppColors.amberGlow;
+          shadows = [
+            BoxShadow(
+              color: AppColors.amberGlow.withValues(alpha: 0.4),
+              blurRadius: 8,
+            ),
+          ];
         } else {
+          // Future rounds
           color = const Color.fromRGBO(255, 255, 255, 0.08);
         }
 

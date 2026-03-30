@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import 'question.dart';
 
-enum GamePhase { waiting, active, answered, revealing, transitioning }
+enum GamePhase { preview, active, answered, revealing, revealed, transitioning }
 
 @immutable
 class ActiveGameState {
@@ -29,6 +29,7 @@ class ActiveGameState {
     this.correctIndex,
     this.yourTimeMs,
     this.theirTimeMs,
+    this.roundResults = const [],
   });
 
   final String matchId;
@@ -54,6 +55,7 @@ class ActiveGameState {
   final int? correctIndex;
   final int? yourTimeMs;
   final int? theirTimeMs;
+  final List<String> roundResults;
 
   ActiveGameState copyWith({
     String? matchId,
@@ -78,6 +80,7 @@ class ActiveGameState {
     int? correctIndex,
     int? yourTimeMs,
     int? theirTimeMs,
+    List<String>? roundResults,
   }) =>
       ActiveGameState(
         matchId: matchId ?? this.matchId,
@@ -103,5 +106,6 @@ class ActiveGameState {
         correctIndex: correctIndex ?? this.correctIndex,
         yourTimeMs: yourTimeMs ?? this.yourTimeMs,
         theirTimeMs: theirTimeMs ?? this.theirTimeMs,
+        roundResults: roundResults ?? this.roundResults,
       );
 }

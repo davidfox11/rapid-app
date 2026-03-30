@@ -18,9 +18,19 @@ class GameNotifier extends StateNotifier<ActiveGameState?> {
 
   final _rng = Random();
   Timer? _opponentTimer;
+  Timer? _phaseTimer;
+  Timer? _revealedTimer;
   DateTime? _questionStartTime;
 
+  void _cancelAllTimers() {
+    _opponentTimer?.cancel();
+    _phaseTimer?.cancel();
+    _revealedTimer?.cancel();
+  }
+
   void startGame(Friend opponent, Category category) {
+    _cancelAllTimers();
+    final question = MockData.mockQuestions[0];
     state = ActiveGameState(
       matchId: 'm_${DateTime.now().millisecondsSinceEpoch}',
       opponentName: opponent.displayName,
@@ -31,11 +41,13 @@ class GameNotifier extends StateNotifier<ActiveGameState?> {
       currentRound: 1,
       yourScore: 0,
       theirScore: 0,
-      phase: GamePhase.waiting,
-      currentQuestion: MockData.mockQuestions[0],
+      phase: GamePhase.preview,
+      currentQuestion: question,
+      roundResults: const [],
     );
-    // Brief setup, then go active
-    Future.delayed(const Duration(milliseconds: 200), () {
+    // Preview delay based on question text length
+    final previewMs = _previewDuration(question.text);
+    _phaseTimer = Timer(Duration(milliseconds: previewMs), () {
       if (!mounted || state == null) return;
       _questionStartTime = DateTime.now();
       state = state!.copyWith(phase: GamePhase.active);
@@ -43,11 +55,20 @@ class GameNotifier extends StateNotifier<ActiveGameState?> {
     });
   }
 
+  /// Returns preview duration in ms: 2000 for short questions, 3000 for long.
+  int _previewDuration(String text) {
+    return text.length > 80 ? 3000 : 2000;
+  }
+
   void _scheduleOpponentAnswer() {
     final delay = Duration(milliseconds: 1500 + _rng.nextInt(4500));
     _opponentTimer?.cancel();
     _opponentTimer = Timer(delay, () {
-      if (state == null || state!.phase == GamePhase.revealing) return;
+      if (state == null ||
+          state!.phase == GamePhase.revealing ||
+          state!.phase == GamePhase.revealed) {
+        return;
+      }
       state = state!.copyWith(opponentAnswered: true);
       // If we're already in answered phase, start suspense
       if (state!.phase == GamePhase.answered) {
@@ -84,7 +105,8 @@ class GameNotifier extends StateNotifier<ActiveGameState?> {
   }
 
   void _startSuspensePause() {
-    Future.delayed(const Duration(milliseconds: 800), () {
+    _phaseTimer?.cancel();
+    _phaseTimer = Timer(const Duration(milliseconds: 800), () {
       if (!mounted || state == null) return;
       _revealResult();
     });
@@ -114,6 +136,17 @@ class GameNotifier extends StateNotifier<ActiveGameState?> {
     final yourPoints = calcPoints(yourCorrect, yourTimeMs);
     final theirPoints = calcPoints(theirCorrect, theirTimeMs);
 
+    // Determine round winner
+    String roundWinner;
+    if (yourPoints > theirPoints) {
+      roundWinner = 'you';
+    } else if (theirPoints > yourPoints) {
+      roundWinner = 'them';
+    } else {
+      roundWinner = 'draw';
+    }
+
+    // Set to revealing (suspense phase)
     state = s.copyWith(
       phase: GamePhase.revealing,
       yourChoice: yourChoice,
@@ -127,7 +160,15 @@ class GameNotifier extends StateNotifier<ActiveGameState?> {
       theirTimeMs: theirTimeMs,
       yourScore: s.yourScore + yourPoints,
       theirScore: s.theirScore + theirPoints,
+      roundResults: [...s.roundResults, roundWinner],
     );
+
+    // After 800ms suspense, transition to revealed (result display)
+    _revealedTimer?.cancel();
+    _revealedTimer = Timer(const Duration(milliseconds: 800), () {
+      if (!mounted || state == null) return;
+      state = state!.copyWith(phase: GamePhase.revealed);
+    });
   }
 
   void nextRound() {
@@ -138,6 +179,8 @@ class GameNotifier extends StateNotifier<ActiveGameState?> {
       endGame();
       return;
     }
+
+    _cancelAllTimers();
 
     final nextRound = s.currentRound + 1;
     final nextQuestion = MockData.mockQuestions[nextRound - 1];
@@ -152,11 +195,13 @@ class GameNotifier extends StateNotifier<ActiveGameState?> {
       currentRound: nextRound,
       yourScore: s.yourScore,
       theirScore: s.theirScore,
-      phase: GamePhase.transitioning,
+      phase: GamePhase.preview,
       currentQuestion: nextQuestion,
+      roundResults: s.roundResults,
     );
 
-    Future.delayed(const Duration(milliseconds: 200), () {
+    final previewMs = _previewDuration(nextQuestion.text);
+    _phaseTimer = Timer(Duration(milliseconds: previewMs), () {
       if (!mounted || state == null) return;
       _questionStartTime = DateTime.now();
       state = state!.copyWith(phase: GamePhase.active);
@@ -165,13 +210,13 @@ class GameNotifier extends StateNotifier<ActiveGameState?> {
   }
 
   void endGame() {
-    // State stays as-is — the gameplay screen reads it and navigates
-    _opponentTimer?.cancel();
+    // State stays as-is -- the gameplay screen reads it and navigates
+    _cancelAllTimers();
   }
 
   @override
   void dispose() {
-    _opponentTimer?.cancel();
+    _cancelAllTimers();
     super.dispose();
   }
 }
